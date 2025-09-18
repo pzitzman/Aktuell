@@ -8,7 +8,7 @@ This document provides a comprehensive overview of the GitHub Actions workflows 
 ### 1. CI Workflow (`ci.yml`)
 - **Purpose**: Continuous Integration testing and building
 - **Triggers**: Push to any branch, Pull requests
-- **Go Versions**: 1.21, 1.22, 1.23 (matrix testing)
+- **Go Versions**: 1.23, 1.24, 1.25 (matrix testing)
 - **Services**: MongoDB (for integration testing)
 - **Steps**:
   - Go setup and caching
@@ -73,7 +73,7 @@ This document provides a comprehensive overview of the GitHub Actions workflows 
 - ✅ **SARIF results** uploaded to GitHub Security tab
 
 ### Testing & Validation
-- ✅ **Multi-version Go testing** (1.21, 1.22, 1.23)
+- ✅ **Multi-version Go testing** (1.23, 1.24, 1.25)
 - ✅ **MongoDB integration testing** with real database
 - ✅ **React TypeScript builds** with error checking
 - ✅ **Code coverage reporting** with artifacts
@@ -139,7 +139,7 @@ DOCKER_PASSWORD      # Docker Hub password
 - **Build artifacts**: Cross-job artifact sharing
 
 ### Parallel Execution
-- **Go testing**: Matrix across versions (1.21, 1.22, 1.23)
+- **Go testing**: Matrix across versions (1.23, 1.24, 1.25)
 - **Binary builds**: Parallel compilation for all platforms
 - **Docker builds**: Concurrent multi-arch building
 - **Security scans**: Parallel vulnerability detection

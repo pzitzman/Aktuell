@@ -46,7 +46,7 @@ The project includes 5 comprehensive GitHub Actions workflows:
 ### 1. **CI Workflow** (`.github/workflows/ci.yml`)
 **Triggers:** Push, Pull Request
 **Features:**
-- Tests Go code across versions 1.21, 1.22, 1.23
+- Tests Go code across versions 1.23, 1.24, 1.25
 - Runs React TypeScript builds
 - MongoDB integration testing
 - Code coverage reporting
