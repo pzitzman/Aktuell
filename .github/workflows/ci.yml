@@ -27,42 +27,91 @@ jobs:
     - name: Start MongoDB Replica Set
       run: |
         # Start MongoDB with replica set configuration
+        echo "Starting MongoDB container..."
         docker run -d \
           --name mongodb-rs \
           -p 27017:27017 \
           mongo:7.0 \
-          mongod --replSet rs0 --bind_ip_all
+          mongod --replSet rs0 --bind_ip_all --logpath /var/log/mongodb.log
         
-        # Wait for MongoDB to start
+        # Check if container started
+        echo "Checking container status..."
+        docker ps -a --filter name=mongodb-rs
+        
+        # Show MongoDB logs for debugging
+        echo "MongoDB startup logs:"
+        docker logs mongodb-rs
+        
+        # Wait for MongoDB to start with better error handling
         echo "Waiting for MongoDB to start..."
-        for i in {1..30}; do
+        MONGODB_READY=false
+        for i in {1..20}; do
           if docker exec mongodb-rs mongosh --quiet --eval "db.runCommand({ping: 1})" > /dev/null 2>&1; then
-            echo "MongoDB is ready"
+            echo "MongoDB is ready after $i attempts"
+            MONGODB_READY=true
             break
           fi
-          echo "Waiting for MongoDB... ($i/30)"
-          sleep 2
+          echo "Waiting for MongoDB... ($i/20)"
+          
+          # Show recent logs if taking too long
+          if [ $i -eq 10 ]; then
+            echo "MongoDB logs after 10 attempts:"
+            docker logs --tail 20 mongodb-rs
+          fi
+          
+          sleep 3
         done
+        
+        if [ "$MONGODB_READY" != "true" ]; then
+          echo "MongoDB failed to start. Final logs:"
+          docker logs mongodb-rs
+          exit 1
+        fi
         
         # Initialize replica set
         echo "Initializing replica set..."
         docker exec mongodb-rs mongosh --eval "
-          rs.initiate({
-            _id: 'rs0',
-            members: [{ _id: 0, host: 'localhost:27017' }]
-          })
+          try {
+            rs.initiate({
+              _id: 'rs0',
+              members: [{ _id: 0, host: 'localhost:27017' }]
+            });
+            print('Replica set initiated successfully');
+          } catch (e) {
+            print('Error initiating replica set: ' + e);
+            throw e;
+          }
         "
         
         # Wait for replica set to be ready
         echo "Waiting for replica set to be ready..."
-        for i in {1..30}; do
-          if docker exec mongodb-rs mongosh --quiet --eval "rs.status().ok" 2>/dev/null | grep -q "1"; then
-            echo "Replica set is ready"
+        RS_READY=false
+        for i in {1..15}; do
+          if docker exec mongodb-rs mongosh --quiet --eval "
+            try {
+              var status = rs.status();
+              if (status.ok === 1 && status.members && status.members[0].state === 1) {
+                print('ready');
+              }
+            } catch (e) {
+              print('not ready');
+            }
+          " 2>/dev/null | grep -q "ready"; then
+            echo "Replica set is ready after $i attempts"
+            RS_READY=true
             break
           fi
-          echo "Waiting for replica set... ($i/30)"
+          echo "Waiting for replica set... ($i/15)"
           sleep 2
         done
+        
+        if [ "$RS_READY" != "true" ]; then
+          echo "Replica set failed to initialize. Status:"
+          docker exec mongodb-rs mongosh --eval "rs.status()"
+          exit 1
+        fi
+        
+        echo "MongoDB replica set is fully ready!"
 
     - name: Cache Go modules
       uses: actions/cache@v4
