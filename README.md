@@ -8,6 +8,8 @@
 
 **Aktuell** (German for "current/up-to-date") is a high-performance, real-time MongoDB change streams monitoring system with WebSocket-based live updates and a modern React dashboard.
 
+Project is in development phase. Feel free to try it out!
+
 ## 🚀 Features
 
 - **Real-time Change Streams**: Monitor MongoDB collections with instant updates
@@ -25,6 +27,79 @@
 │   (Dashboard)   │    │   (Go Server)   │    │ Change Streams  │
 │                 │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         │ Subscribe Request     │                       │
+         │ w/ Snapshot Options   │                       │
+         ├──────────────────────►│                       │
+         │                       │                       │
+         │                   ┌───▼────┐                  │
+         │                   │Snapshot│                  │
+         │                   │Manager │                  │
+         │                   └───┬────┘                  │
+         │                       │                       │
+         │                       │ Query Existing Data   │
+         │                       ├──────────────────────►│
+         │ Snapshot Batch 1/N    │                       │
+         │◄──────────────────────┤                       │
+         │ Snapshot Batch 2/N    │                       │
+         │◄──────────────────────┤                       │
+         │ ... (batched data)    │                       │
+         │ Snapshot Complete     │                       │
+         │◄──────────────────────┤                       │
+         │                       │                       │
+         │ Real-time Changes     │                       │
+         │◄──────────────────────┤◄──────────────────────│
+```
+
+### Message Flow
+
+1. **Initial Connection**: Client establishes WebSocket connection
+2. **Subscribe with Snapshot**: Client sends subscription request with `SnapshotOptions`
+3. **Snapshot Streaming**: Server queries existing documents and streams them in batches
+4. **Real-time Updates**: After snapshot completion, live change events are streamed
+
+### WebSocket Protocol
+
+**Client → Server Messages:**
+```json
+{
+  "type": "subscribe",
+  "database": "inventory", 
+  "collection": "products",
+  "snapshot_options": {
+    "include_snapshot": true,
+    "batch_size": 100,
+    "snapshot_limit": 1000,
+    "snapshot_filter": {"status": "active"},
+    "snapshot_sort": {"created_at": -1}
+  }
+}
+```
+If include_snapshot is set to false, no initial dataload is retrieved.
+And only the changes are propagated.
+
+**Server → Client Messages:**
+```json
+// Snapshot batch
+{
+  "type": "snapshot",
+  "snapshot_data": [{...}, {...}],
+  "snapshot_batch": 1,
+  "snapshot_total": 1000,
+  "snapshot_remaining": 900
+}
+
+// Change event
+{
+  "type": "change", 
+  "change": {
+    "operationType": "insert",
+    "database": "inventory",
+    "collection": "products", 
+    "documentKey": {"_id": "..."},
+    "fullDocument": {...}
+  }
+}
 ```
 
 ## Quick Start
