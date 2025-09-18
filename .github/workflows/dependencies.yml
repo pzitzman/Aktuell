@@ -1,0 +1,130 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-go-dependencies:
+    name: Update Go Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23
+
+    - name: Update Go dependencies
+      run: |
+        go get -u ./...
+        go mod tidy
+
+    - name: Check if dependencies changed
+      id: verify-changed-files
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run tests with updated dependencies
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      run: go test -v -short ./...
+
+    - name: Create Pull Request
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update go dependencies'
+        title: 'chore: update go dependencies'
+        body: |
+          This PR updates Go dependencies to their latest versions.
+          
+          ## Changes
+          
+          - Updated Go module dependencies
+          - Ran `go mod tidy` to clean up
+          - All tests passing
+          
+          ## Review Notes
+          
+          Please review the dependency changes and ensure compatibility.
+          The CI pipeline will run all tests to verify everything works correctly.
+        branch: chore/update-go-dependencies
+        delete-branch: true
+
+  update-react-dependencies:
+    name: Update React Dependencies
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./react-client
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: react-client/package-lock.json
+
+    - name: Update React dependencies
+      run: |
+        npm update
+        npm audit fix --audit-level moderate
+
+    - name: Check if dependencies changed
+      id: verify-changed-files
+      run: |
+        cd ..
+        if [ -n "$(git status --porcelain react-client/)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run tests with updated dependencies
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      run: |
+        npm ci
+        npm run lint
+        npm run build
+
+    - name: Create Pull Request
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update react client dependencies'
+        title: 'chore: update react client dependencies'
+        body: |
+          This PR updates React client dependencies to their latest versions.
+          
+          ## Changes
+          
+          - Updated npm dependencies
+          - Ran security audit fixes
+          - All linting and build tests passing
+          
+          ## Review Notes
+          
+          Please review the dependency changes and test the React client.
+          The CI pipeline will verify all builds and linting passes.
+        branch: chore/update-react-dependencies
+        delete-branch: true

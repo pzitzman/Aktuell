@@ -1,0 +1,43 @@
+# Aktuell Multi-Database Configuration Example
+# This configuration demonstrates monitoring multiple databases simultaneously
+
+mongodb:
+  uri: "mongodb://localhost:27017"
+  
+  # Multi-database configuration - Monitor multiple databases at once
+  databases:
+    
+    # E-commerce database  
+    - name: "InventoryDB"
+      collections:
+        - "Products"
+        - "Orders"
+        - "Customers"
+        - "Suppliers"
+    
+    # System logging database
+    - name: "LogsDB"
+      collections:
+        - "SystemLogs"
+        - "ErrorLogs"
+        - "AuditLogs"
+    
+    # Analytics database
+    - name: "AnalyticsDB"
+      collections:
+        - "UserEvents"
+        - "PageViews"
+        - "Metrics"
+
+server:
+  host: "localhost"
+  port: 8080
+
+logging:
+  level: "info"
+
+# Features enabled by multi-database configuration:
+# - Clients can subscribe to specific database.collection combinations
+# - Each database runs its own change stream for optimal performance
+# - Isolated failure handling - issues in one database don't affect others
+# - Flexible scaling - add or remove databases without server restart

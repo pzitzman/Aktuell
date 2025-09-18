@@ -1,0 +1,24 @@
+# Aktuell Single-Database Configuration Example
+# Legacy configuration format - still fully supported
+
+mongodb:
+  uri: "mongodb://localhost:27017"
+  
+  # Single database configuration (legacy format)
+  database: "myapp"
+  collections:
+    - "users"
+    - "posts"
+    - "comments"
+
+server:
+  host: "localhost"
+  port: 8080
+
+logging:
+  level: "info"
+
+# This configuration will automatically be converted internally to:
+# databases:
+#   - name: "myapp"
+#     collections: ["users", "posts", "comments"]

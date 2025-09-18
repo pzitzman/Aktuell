@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: aktuell-db
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: aktuell
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/init-replica.js:/docker-entrypoint-initdb.d/init-replica.js:ro
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  aktuell:
+    build: .
+    container_name: aktuell-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      AKTUELL_MONGODB_URI: mongodb://mongodb:27017/aktuell?replicaSet=rs0
+      AKTUELL_MONGODB_DATABASE: aktuell
+      AKTUELL_SERVER_HOST: 0.0.0.0
+      AKTUELL_SERVER_PORT: 8080
+      AKTUELL_LOGGING_LEVEL: info
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./config.yaml:/root/config.yaml:ro
+
+volumes:
+  mongodb_data:
