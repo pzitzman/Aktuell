@@ -106,6 +106,42 @@ docker-stop: ## Stop Docker Compose services
 docker-logs: ## View Docker logs
 	docker-compose logs -f
 
+# MongoDB quick operations
+mongo-insert: ## Insert a new random user into MongoDB
+	@echo "Inserting a new user into MongoDB..."
+	docker exec aktuell-db mongosh aktuell --eval "db.users.insertOne({name: 'User $$(date +%s)', email: 'user$$(date +%s)@example.com', age: $$((RANDOM % 50 + 20)), salary: Math.floor(Math.random() * 80000) + 40000, loginCount: Math.floor(Math.random() * 100) + 1, status: ['active', 'inactive', 'pending'][Math.floor(Math.random() * 3)], skills: [['JavaScript', 'React'], ['Python', 'Django'], ['Go', 'MongoDB'], ['Java', 'Spring'], ['Node.js', 'Express']][Math.floor(Math.random() * 5)], department: ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance'][Math.floor(Math.random() * 5)], createdAt: new Date()})" --quiet
+
+mongo-update: ## Update a random user in MongoDB
+	@echo "Updating a random user in MongoDB..."
+	docker exec aktuell-db mongosh aktuell --eval "db.users.updateOne({}, {\$$set: {lastUpdated: new Date(), status: 'updated', salary: Math.floor(Math.random() * 50000) + 50000}})" --quiet
+
+mongo-delete: ## Delete one user from MongoDB
+	@echo "Deleting one user from MongoDB..."
+	docker exec aktuell-db mongosh aktuell --eval "db.users.deleteOne({})" --quiet
+
+mongo-count: ## Count users in MongoDB
+	@echo "Counting users in MongoDB..."
+	@docker exec aktuell-db mongosh aktuell --eval "db.users.countDocuments()" --quiet
+
+mongo-list: ## List all users in MongoDB
+	@echo "Listing all users in MongoDB..."
+	@docker exec aktuell-db mongosh aktuell --eval "db.users.find().pretty()" --quiet
+
+mongo-clear: ## Clear all users from MongoDB
+	@echo "Clearing all users from MongoDB..."
+	@echo "⚠️  This will delete ALL users!"
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	docker exec aktuell-db mongosh aktuell --eval "db.users.deleteMany({})" --quiet
+	@echo "✅ All users deleted!"
+
+mongo-demo: ## Run comprehensive MongoDB demo operations
+	@echo "Running comprehensive MongoDB demo..."
+	./scripts/docker-mongo-operations.sh
+
+mongo-status: ## Show MongoDB connection status
+	@echo "Checking MongoDB status..."
+	@docker exec aktuell-db mongosh --eval "db.adminCommand('hello')" --quiet >/dev/null 2>&1 && echo "✅ MongoDB is running and accessible" || echo "❌ MongoDB is not accessible"
+
 # Example targets
 examples: build ## Build example applications
 	@echo "Building example applications..."
