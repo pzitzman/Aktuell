@@ -17,10 +17,13 @@ jobs:
         ports:
           - 27017:27017
         options: >-
-          --health-cmd "mongosh --eval 'db.runCommand({ping: 1})'"
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping: 1})' || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+          mongod --replSet rs0 --bind_ip_all
+        env:
+          MONGO_INITDB_DATABASE: test
 
     strategy:
       matrix:
@@ -64,6 +67,36 @@ jobs:
 
     - name: Run unit tests
       run: go test -v -short -race -coverprofile=coverage.out ./...
+
+    - name: Initialize MongoDB Replica Set
+      run: |
+        # Wait for MongoDB to be ready
+        for i in {1..30}; do
+          if mongosh --quiet --eval "db.runCommand({ping: 1})" > /dev/null 2>&1; then
+            echo "MongoDB is ready"
+            break
+          fi
+          echo "Waiting for MongoDB... ($i/30)"
+          sleep 2
+        done
+        
+        # Initialize replica set
+        mongosh --eval "
+          rs.initiate({
+            _id: 'rs0',
+            members: [{ _id: 0, host: 'localhost:27017' }]
+          })
+        "
+        
+        # Wait for replica set to be ready
+        for i in {1..30}; do
+          if mongosh --quiet --eval "rs.status().ok" | grep -q "1"; then
+            echo "Replica set is ready"
+            break
+          fi
+          echo "Waiting for replica set... ($i/30)"
+          sleep 2
+        done
 
     - name: Run integration tests
       env:
