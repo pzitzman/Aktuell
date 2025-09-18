@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -52,11 +54,69 @@ type WebSocketServer struct {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  4096, // Increased from 1024
 	WriteBufferSize: 4096, // Increased from 1024
-	CheckOrigin: func(r *http.Request) bool {
-		// Allow connections from any origin for development
-		// In production, you should check the origin properly
-		return true
-	},
+	CheckOrigin:     checkOrigin,
+}
+
+// getDefaultAllowedOrigins returns default origins based on environment
+func getDefaultAllowedOrigins() []string {
+	env := os.Getenv("AKTUELL_ENV")
+	if env == "production" {
+		// In production, only allow explicitly configured origins
+		return []string{}
+	}
+
+	// Development defaults
+	return []string{
+		"http://localhost:3000",  // React development server
+		"http://localhost:8080",  // Alternative dev server
+		"https://localhost:3000", // HTTPS dev server
+	}
+}
+
+// checkOrigin validates WebSocket connection origins for security
+func checkOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+
+	// In development mode (when AKTUELL_ENV != "production"), allow localhost origins
+	env := os.Getenv("AKTUELL_ENV")
+	if env != "production" {
+		if origin == "" {
+			return true // Allow same-origin requests
+		}
+
+		// Allow any localhost or 127.0.0.1 origin in development
+		if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
+			return true
+		}
+	}
+
+	// Priority 1: Check custom allowed origins from environment variable
+	if customOrigins := os.Getenv("AKTUELL_ALLOWED_ORIGINS"); customOrigins != "" {
+		customList := strings.Split(customOrigins, ",")
+		for _, allowed := range customList {
+			if strings.TrimSpace(allowed) == origin {
+				return true
+			}
+		}
+
+		// In production, if AKTUELL_ALLOWED_ORIGINS is set, ONLY use those origins
+		if env == "production" {
+			log.Printf("WebSocket connection rejected from origin: %s (not in AKTUELL_ALLOWED_ORIGINS)", origin)
+			return false
+		}
+	}
+
+	// Priority 2: Check default allowed origins (only used in development)
+	defaultOrigins := getDefaultAllowedOrigins()
+	for _, allowed := range defaultOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+
+	// Log rejected origins for security monitoring
+	log.Printf("WebSocket connection rejected from origin: %s (remote: %s)", origin, r.RemoteAddr)
+	return false
 }
 
 // NewWebSocketServer creates a new WebSocket server

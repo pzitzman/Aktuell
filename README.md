@@ -190,6 +190,81 @@ Aktuell/
 └── docs/                # Documentation
 ```
 
+## Security Configuration
+
+Aktuell includes built-in security measures for WebSocket connections to prevent CSRF attacks and unauthorized access.
+
+### WebSocket Origin Validation
+
+By default, Aktuell validates the `Origin` header of WebSocket connections:
+
+**Development Mode** (when `AKTUELL_ENV` ≠ "production"):
+- Allows all `localhost` and `127.0.0.1` origins
+- Permits same-origin requests
+
+**Production Mode** (when `AKTUELL_ENV` = "production"):
+- Strictly validates against allowed origins list
+- Rejects and logs unauthorized connection attempts
+
+### Configuring Allowed Origins
+
+#### Method 1: Environment Variable (Required for Production)
+```bash
+# Production: REQUIRED - Comma-separated list of allowed origins
+export AKTUELL_ENV="production"
+export AKTUELL_ALLOWED_ORIGINS="https://app.example.com,https://dashboard.example.com"
+
+# Development: Optional - uses localhost defaults if not set
+export AKTUELL_ENV="development"  # or leave unset
+export AKTUELL_ALLOWED_ORIGINS="http://localhost:3000,http://localhost:8080"  # optional
+```
+
+**Important**: In production mode (`AKTUELL_ENV=production`):
+- You **MUST** set `AKTUELL_ALLOWED_ORIGINS` 
+- If `AKTUELL_ALLOWED_ORIGINS` is not set, **all** WebSocket connections will be rejected
+- Only origins in `AKTUELL_ALLOWED_ORIGINS` will be allowed
+
+**Development mode** (default when `AKTUELL_ENV` is not "production"):
+- Automatically allows `localhost` and `127.0.0.1` origins
+- `AKTUELL_ALLOWED_ORIGINS` is optional and adds to the allowed list
+
+### Security Best Practices
+
+1. **Always set `AKTUELL_ENV=production`** in production environments
+2. **Always set `AKTUELL_ALLOWED_ORIGINS`** in production environments
+3. **Use HTTPS origins** in production (`https://` not `http://`)
+4. **Be specific with origins** - avoid wildcards or overly broad patterns
+5. **Monitor logs** for rejected connection attempts
+6. **Use TLS/SSL** for WebSocket connections in production (WSS)
+
+### Example Production Configuration
+
+```bash
+# Production environment - REQUIRED settings
+export AKTUELL_ENV="production"
+export AKTUELL_ALLOWED_ORIGINS="https://dashboard.mycompany.com,https://app.mycompany.com"
+
+# Secure MongoDB connection
+export AKTUELL_MONGODB_URI="mongodb://username:password@mongo.mycompany.com:27017/myapp?ssl=true"
+
+# Bind to all interfaces securely (behind reverse proxy)
+export AKTUELL_SERVER_HOST="0.0.0.0"
+export AKTUELL_SERVER_PORT="8080"
+```
+
+### Example Development Configuration
+
+```bash
+# Development environment - optional settings
+export AKTUELL_ENV="development"  # or leave unset
+# AKTUELL_ALLOWED_ORIGINS is optional - localhost origins are automatically allowed
+
+# Local MongoDB connection
+export AKTUELL_MONGODB_URI="mongodb://localhost:27017"
+export AKTUELL_SERVER_HOST="localhost"
+export AKTUELL_SERVER_PORT="8080"
+```
+
 ## Contributing
 
 Contributions are welcome! Please read our contributing guidelines and submit pull requests to our repository.

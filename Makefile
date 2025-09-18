@@ -40,14 +40,14 @@ test-unit: test ## Alias for test
 test-integration: ## Run integration tests (requires MongoDB)
 	@echo "Running integration tests..."
 	@echo "Note: This requires MongoDB to be running on localhost:27017"
-	INTEGRATION_TESTS=1 go test -v ./tests/integration_test.go -timeout=60s
+	INTEGRATION_TESTS=1 go test -v -tags=integration ./tests/... -timeout=60s
 
 test-all: ## Run all tests (unit + integration)
 	@echo "Running all tests..."
 	go test -v -short ./pkg/...
 	@echo ""
 	@echo "Running integration tests..."
-	INTEGRATION_TESTS=1 go test -v ./tests/integration_test.go
+	INTEGRATION_TESTS=1 go test -v -tags=integration ./tests/...
 
 test-cover: ## Run tests with coverage
 	@echo "Running tests with coverage..."
