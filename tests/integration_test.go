@@ -1,6 +1,8 @@
 //go:build integration
 // +build integration
 
+//nolint:errcheck // Test files don't require strict error checking on connection deadlines
+
 package tests
 
 import (
@@ -26,6 +28,13 @@ import (
 	"aktuell/pkg/server"
 	"aktuell/pkg/sync"
 )
+
+// Helper function to set connection deadline and log errors in tests
+func setConnDeadline(conn *websocket.Conn, deadline time.Time, t *testing.T) {
+	if err := conn.SetReadDeadline(deadline); err != nil {
+		t.Logf("Warning: Failed to set read deadline: %v", err)
+	}
+}
 
 // IntegrationTestSuite runs full stack integration tests
 type IntegrationTestSuite struct {
@@ -55,7 +64,9 @@ func (suite *IntegrationTestSuite) getUniqueCollectionName() string {
 func (suite *IntegrationTestSuite) setupTestSyncManager(collectionName string) error {
 	// Stop existing sync manager if any
 	if suite.syncManager != nil {
-		suite.syncManager.Stop()
+		if err := suite.syncManager.Stop(); err != nil {
+			suite.T().Logf("Error stopping sync manager: %v", err)
+		}
 	}
 
 	// Configure database for testing with unique collection
@@ -137,7 +148,9 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	suite.cleanupFuncs = append(suite.cleanupFuncs, func() {
 		suite.cleanupTestData()
 		if suite.syncManager != nil {
-			suite.syncManager.Stop()
+			if err := suite.syncManager.Stop(); err != nil {
+				suite.T().Logf("Error stopping sync manager in cleanup: %v", err)
+			}
 		}
 		if suite.wsServer != nil {
 			suite.wsServer.Stop()
@@ -274,7 +287,7 @@ func (suite *IntegrationTestSuite) TestSubscriptionAndChangeDetection() {
 	time.Sleep(100 * time.Millisecond)
 
 	// Set read timeout for change event
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	setConnDeadline(conn, time.Now().Add(10*time.Second), suite.T())
 
 	// Read change event
 	var changeResponse models.ServerMessage

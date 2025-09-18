@@ -127,7 +127,9 @@ func main() {
 
 	// Graceful shutdown - stop components in reverse order of startup
 	logger.Info("Stopping sync manager...")
-	syncManager.Stop()
+	if err := syncManager.Stop(); err != nil {
+		logger.WithError(err).Error("Error stopping sync manager")
+	}
 
 	logger.Info("Stopping WebSocket server...")
 	if err := wsServer.Stop(); err != nil {

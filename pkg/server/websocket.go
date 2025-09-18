@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -247,9 +248,14 @@ func (c *Client) readPump() {
 		c.conn.Close()
 	}()
 
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	if err := c.conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
+		c.hub.logger.WithError(err).Error("Failed to set read deadline")
+		return
+	}
 	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		if err := c.conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
+			c.hub.logger.WithError(err).Error("Failed to set read deadline in pong handler")
+		}
 		return nil
 	})
 
@@ -293,7 +299,10 @@ func (c *Client) writePump() {
 			if message.Type == models.MessageTypeSnapshot {
 				writeDeadline = 30 * time.Second // Longer timeout for snapshot data
 			}
-			c.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeDeadline)); err != nil {
+				c.hub.logger.WithError(err).Error("Failed to set write deadline")
+				return
+			}
 
 			if err := c.conn.WriteJSON(message); err != nil {
 				c.hub.logger.WithError(err).WithFields(logrus.Fields{
@@ -310,7 +319,10 @@ func (c *Client) writePump() {
 			}).Debug("Successfully sent message to client")
 
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+				c.hub.logger.WithError(err).Error("Failed to set write deadline for ping")
+				return
+			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -605,8 +617,11 @@ func (c *Client) handleHealthWS(message *models.ClientMessage) {
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"status": "healthy",
 		"time":   time.Now().UTC().Format(time.RFC3339),
-	})
+	}); err != nil {
+		// Log error but don't change response status since headers are already sent
+		log.Printf("Failed to encode health check response: %v", err)
+	}
 }
