@@ -25,8 +25,8 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/aktuell .
 
-# Copy config file
-COPY --from=builder /app/config.yaml .
+# Copy config file with the name Viper expects
+COPY --from=builder /app/config-docker.yaml ./config.yaml
 
 # Expose port
 EXPOSE 8080

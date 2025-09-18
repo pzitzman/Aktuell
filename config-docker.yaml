@@ -1,0 +1,15 @@
+mongodb:
+  uri: "mongodb://mongodb:27017/aktuell?replicaSet=rs0"
+  
+  # Multi-database configuration (recommended)
+  databases:
+    - name: "aktuell"
+      collections:
+        - "users"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+logging:
+  level: "info"

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"aktuell/pkg/models"
@@ -155,6 +156,7 @@ func loadConfig() (*Config, error) {
 	// Environment variable configuration
 	viper.SetEnvPrefix("AKTUELL")
 	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// Config file
 	viper.SetConfigName("config")
