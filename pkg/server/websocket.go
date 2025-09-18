@@ -34,6 +34,7 @@ type Client struct {
 	conn          *websocket.Conn
 	send          chan *models.ServerMessage
 	subscriptions map[string]*models.Subscription
+	closed        bool // Track if connection has been closed
 	mu            sync.RWMutex
 }
 
@@ -44,7 +45,8 @@ type WebSocketServer struct {
 	logger           *logrus.Logger
 	validator        models.SubscriptionValidator
 	snapshotStreamer models.SnapshotStreamer
-	actualAddr       string // Store the actual listening address
+	actualAddr       string     // Store the actual listening address
+	addrMu           sync.Mutex // Protect actualAddr field
 }
 
 var upgrader = websocket.Upgrader{
@@ -112,8 +114,10 @@ func (ws *WebSocketServer) Start() error {
 		return err
 	}
 
-	// Store the actual listening address
+	// Store the actual listening address with proper synchronization
+	ws.addrMu.Lock()
 	ws.actualAddr = listener.Addr().String()
+	ws.addrMu.Unlock()
 
 	return ws.server.Serve(listener)
 }
@@ -125,8 +129,12 @@ func (ws *WebSocketServer) Stop() error {
 
 // GetAddr returns the server's actual listening address
 func (ws *WebSocketServer) GetAddr() string {
-	if ws.actualAddr != "" {
-		return ws.actualAddr
+	ws.addrMu.Lock()
+	addr := ws.actualAddr
+	ws.addrMu.Unlock()
+
+	if addr != "" {
+		return addr
 	}
 	if ws.server.Addr == "" {
 		return "localhost:8080" // default fallback
@@ -241,11 +249,22 @@ func (h *Hub) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	go client.readPump()
 }
 
+// safeClose safely closes the WebSocket connection, preventing multiple closes
+func (c *Client) safeClose() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if !c.closed {
+		c.closed = true
+		c.conn.Close()
+	}
+}
+
 // readPump handles incoming messages from the client
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		c.conn.Close()
+		c.safeClose()
 	}()
 
 	if err := c.conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
@@ -283,15 +302,23 @@ func (c *Client) writePump() {
 	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		c.safeClose()
 	}()
 
 	for {
 		select {
 		case message, ok := <-c.send:
 			if !ok {
-				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					c.hub.logger.WithError(err).Error("Failed to send close message")
+				// Check if connection is still open before sending close message
+				c.mu.RLock()
+				isClosed := c.closed
+				c.mu.RUnlock()
+
+				if !isClosed {
+					if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+						// Only log as debug since connection may have been closed by peer
+						c.hub.logger.WithError(err).Debug("Failed to send close message - connection may already be closed")
+					}
 				}
 				return
 			}
