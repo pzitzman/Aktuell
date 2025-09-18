@@ -312,6 +312,59 @@ export AKTUELL_ALLOWED_ORIGINS="http://localhost:3000,http://localhost:8080"  # 
 5. **Monitor logs** for rejected connection attempts
 6. **Use TLS/SSL** for WebSocket connections in production (WSS)
 
+### Authentication and Authorization
+
+⚠️ **Important Security Notice**: Aktuell itself does not provide built-in authentication or authorization mechanisms. The WebSocket server is designed to be deployed behind authenticated infrastructure components.
+
+**Recommended Production Deployment:**
+
+```
+Internet → Load Balancer → Auth Proxy → Aktuell Server
+              ↓              ↓            ↓
+         TLS Termination  Authentication  WebSocket API
+         Rate Limiting    Authorization   Change Streams
+```
+
+**Common Authentication Patterns:**
+
+1. **Reverse Proxy with Authentication** (Recommended)
+   ```nginx
+   # Example Nginx configuration
+   server {
+       listen 443 ssl;
+       server_name api.mycompany.com;
+       
+       # Authentication middleware
+       auth_request /auth;
+       
+       location /ws {
+           proxy_pass http://aktuell:8080;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection "upgrade";
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+
+2. **API Gateway with JWT Validation**
+   - Use cloud API gateways (AWS API Gateway, Google Cloud Endpoints, etc.)
+   - Validate JWT tokens before forwarding to Aktuell
+   - Implement rate limiting and request throttling
+
+3. **Service Mesh Authentication**
+   - Deploy within Kubernetes with service mesh (Istio, Linkerd)
+   - Use mutual TLS (mTLS) between services
+   - Implement policy-based access control
+
+**Security Considerations:**
+- Never expose Aktuell directly to the internet without authentication
+- Implement proper session management in your auth layer
+- Use database-level access controls for MongoDB
+- Consider implementing audit logging for WebSocket connections
+- Validate user permissions for database/collection access in your auth layer
+
 ### Example Production Configuration
 
 ```bash
