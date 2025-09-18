@@ -32,7 +32,7 @@ jobs:
           --name mongodb-rs \
           -p 27017:27017 \
           mongo:7.0 \
-          mongod --replSet rs0 --bind_ip_all --logpath /var/log/mongodb.log
+          mongod --replSet rs0 --bind_ip_all
         
         # Check if container started
         echo "Checking container status..."
