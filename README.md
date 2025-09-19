@@ -18,6 +18,7 @@ Project is in development phase. Feel free to try it out!
 - **Multi-platform Support**: Runs on Linux, macOS, and Windows
 - **Docker Ready**: Containerized deployment with multi-architecture support
 
+
 ## 🏗️ Architecture
 
 ```
@@ -102,7 +103,70 @@ And only the changes are propagated.
 }
 ```
 
-## Quick Start
+## ⚡ Quick Setup Guide
+
+Get Aktuell running:
+
+### 1. Start the Backend Services
+```bash
+# Clone the repository
+git clone https://github.com/pzitzman/aktuell.git
+cd aktuell
+
+# Start MongoDB and Aktuell server with Docker Compose
+docker-compose up -d
+
+# Verify services are running
+docker ps
+```
+
+### 2. Start the React Frontend
+```bash
+# In a new terminal, start the React development server
+cd react-client
+npm install
+npm start
+```
+
+The React dashboard will open at [http://localhost:3000](http://localhost:3000)
+
+### 3. Generate Test Data
+
+Use any of these commands to create and modify data:
+
+```bash
+# Quick data operations
+make mongo-insert    # Insert a user with realistic data
+make mongo-update    # Update a user with new salary/status
+make mongo-count     # Check user count
+make mongo-list      # View all users
+
+# Or use the comprehensive demo
+make mongo-demo      # Run full demonstration script
+
+# Alternative: Use bash scripts directly
+./scripts/mongo-quick.sh insert
+./scripts/mongo-quick.sh update
+./scripts/mongo-quick.sh list
+```
+
+### 4. Watch Real-time Updates
+
+- Open the React dashboard at [http://localhost:3000](http://localhost:3000)
+- Run `make mongo-insert` or `make mongo-update` in your terminal
+- See the changes appear instantly in the dashboard! ✨
+
+### Services Overview
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **React Dashboard** | http://localhost:3000 | Real-time data visualization |
+| **WebSocket API** | ws://localhost:8080/ws | Live data stream endpoint |
+| **MongoDB** | localhost:27017 | Database (aktuell-db container) |
+
+**That's it!** You now have a complete real-time data streaming system running locally.
+
+## Quick Start without docker
 
 ### Prerequisites
 
@@ -116,24 +180,6 @@ And only the changes are propagated.
 git clone <repository-url>
 cd Aktuell
 go mod download
-```
-
-### Troubleshooting Go Version Issues
-
-If you encounter Go version mismatch errors (e.g., `compile: version "go1.22.1" does not match go tool version "go1.25.1"`):
-
-The project includes universal environment detection that works with any Go installation:
-
-```bash
-# Option 1: Use the Makefile (automatically detects and fixes environment)
-make build
-
-# Option 2: Run the environment fix script manually
-./scripts/fix-go-env.sh
-
-# Option 3: Source the Go environment fix
-source .env.go
-go build -o aktuell ./cmd/server
 ```
 
 ### Running the Server
