@@ -29,6 +29,12 @@ type Hub struct {
 	mu         sync.RWMutex
 }
 
+func (h *Hub) ClientCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.clients)
+}
+
 // Client represents a WebSocket client connection
 type Client struct {
 	ID            string

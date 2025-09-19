@@ -12,6 +12,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestHub_ClientCount tests the ClientCount method of Hub
+func TestHub_ClientCount(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.FatalLevel)
+	server := NewWebSocketServer("localhost:8080", logger)
+	hub := server.hub
+
+	// Initially, no clients
+	assert.Equal(t, 0, hub.ClientCount())
+
+	// Add a client
+	client1 := &Client{ID: "c1", hub: hub, send: make(chan *models.ServerMessage, 1), subscriptions: make(map[string]*models.Subscription)}
+	hub.mu.Lock()
+	hub.clients[client1] = true
+	hub.mu.Unlock()
+	assert.Equal(t, 1, hub.ClientCount())
+
+	// Add another client
+	client2 := &Client{ID: "c2", hub: hub, send: make(chan *models.ServerMessage, 1), subscriptions: make(map[string]*models.Subscription)}
+	hub.mu.Lock()
+	hub.clients[client2] = true
+	hub.mu.Unlock()
+	assert.Equal(t, 2, hub.ClientCount())
+
+	// Remove a client
+	hub.mu.Lock()
+	delete(hub.clients, client1)
+	hub.mu.Unlock()
+	assert.Equal(t, 1, hub.ClientCount())
+
+	// Remove the last client
+	hub.mu.Lock()
+	delete(hub.clients, client2)
+	hub.mu.Unlock()
+	assert.Equal(t, 0, hub.ClientCount())
+}
+
 // MockValidator implements the SubscriptionValidator interface for testing
 type MockValidator struct {
 	mock.Mock

@@ -120,9 +120,7 @@ func (m *Manager) healthMonitor() {
 
 // getClientCount safely gets the number of active clients
 func (m *Manager) getClientCount(hub *server.Hub) int {
-	// We would need to add a method to Hub to get client count safely
-	// For now, we'll return 0 as a placeholder
-	return 0
+	return hub.ClientCount()
 }
 
 // SyncStats represents synchronization statistics
