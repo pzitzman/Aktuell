@@ -6,7 +6,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/pzitzman/aktuell)](https://goreportcard.com/report/github.com/pzitzman/aktuell)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![Aktuell Logo](./logo.svg)
+<div align="center">
+  <img src="./logo.svg" alt="Aktuell Logo" width="400">
+</div>
 
 **Aktuell** (German for "current/up-to-date") is a high-performance, real-time MongoDB change streams monitoring system with WebSocket-based live updates and a modern React dashboard.
 
